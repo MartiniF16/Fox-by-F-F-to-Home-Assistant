@@ -1,0 +1,151 @@
+  - sensor:
+      - name: "FOX Power Active L1"
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'power_active') or [0,0,0])[0]) | float(0) }}
+
+      - name: "FOX Power Active L2"
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'power_active') or [0,0,0])[1]) | float(0) }}
+
+      - name: "FOX Power Active L3"
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'power_active') or [0,0,0])[2]) | float(0) }}
+          
+      - name: "FOX Power Reactive L1"
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'power_reactive') or [0,0,0])[0]) | float(0) }}
+
+      - name: "FOX Power Reactive L2"
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'power_reactive') or [0,0,0])[1]) | float(0) }}
+
+      - name: "FOX Power Reactive L3"
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'power_reactive') or [0,0,0])[2]) | float(0) }}
+
+      - name: "FOX Energy Import Total"
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total_increasing
+        state: >
+          {{ (
+            (state_attr('sensor.fox_total_energy', 'active_energy_import') or [0,0,0])[0]
+          + (state_attr('sensor.fox_total_energy', 'active_energy_import') or [0,0,0])[1]
+          + (state_attr('sensor.fox_total_energy', 'active_energy_import') or [0,0,0])[2]
+          ) | float(0) * 0.001 }}
+          
+      - name: "FOX Voltage L1"
+        unit_of_measurement: "V"
+        device_class: voltage
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'voltage') or [0,0,0])[0]) | float(0) }}
+          
+      - name: "FOX Voltage L2"
+        unit_of_measurement: "V"
+        device_class: voltage
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'voltage') or [0,0,0])[1]) | float(0) }}
+          
+      - name: "FOX Voltage L3"
+        unit_of_measurement: "V"
+        device_class: voltage
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'voltage') or [0,0,0])[2]) | float(0) }}
+          
+      - name: "FOX Current L1"
+        unit_of_measurement: "A"
+        device_class: current
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'current') or [0,0,0])[0]) | float(0) }}
+          
+      - name: "FOX Current L2"
+        unit_of_measurement: "A"
+        device_class: current
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'current') or [0,0,0])[1]) | float(0) }}
+          
+      - name: "FOX Current L3"
+        unit_of_measurement: "A"
+        device_class: current
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'current') or [0,0,0])[2]) | float(0) }}
+          
+      - name: "FOX Frequency L1"
+        unit_of_measurement: "Hz"
+        device_class: frequency
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'frequency') or [0,0,0])[0]) | float(0) }}
+          
+      - name: "FOX Frequency L2"
+        unit_of_measurement: "Hz"
+        device_class: frequency
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'frequency') or [0,0,0])[1]) | float(0) }}
+          
+      - name: "FOX Frequency L3"
+        unit_of_measurement: "Hz"
+        device_class: frequency
+        state_class: measurement
+        state: >
+          {{ ((state_attr('sensor.fox_current_parameters', 'frequency') or [0,0,0])[2]) | float(0) }}
+
+sensor:
+  - platform: rest
+    name: fox_current_parameters
+    resource: "http://192.168.1.170/0000/get_current_parameters"
+    scan_interval: 5
+    value_template: "{{ value_json.status | default('ok') }}"
+    json_attributes:
+      - voltage
+      - current
+      - power_active
+      - power_reactive
+      - frequency
+      - power_factor
+
+  - platform: rest
+    name: fox_total_energy
+    resource: "http://192.168.1.170/0000/get_total_energy"
+    scan_interval: 30
+    value_template: "{{ value_json.status | default('ok') }}"
+    json_attributes:
+      - active_energy_import
+      - active_energy_export
+      - reactive_energy_import
+      - reactive_energy_export
+      
+  - platform: filter
+    name: "FOX Energy Import Filtered"
+    entity_id: sensor.fox_energy_import_total
+    filters:
+      - filter: outlier
+        window_size: 4
+        radius: 20
+      - filter: lowpass
+        time_constant: 10
